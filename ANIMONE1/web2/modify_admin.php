@@ -1,0 +1,200 @@
+<?php session_start(); ?>
+<?php require_once("inc/connection.php"); ?>
+<?php require_once("inc/function.php"); ?>
+
+<?php
+
+ if(!isset($_SESSION['user_id']))
+   {
+	 header('Location: admin_login.php');
+   }
+
+   $errors = array();
+   
+   $user_id= '';
+   $first_name= '';
+   $last_name= '';
+   $email= '';
+   $password='';
+
+   if(isset($_GET['user_id']))
+   {
+   	$user_id = mysqli_real_escape_string($connect,$_GET['user_id']);
+   	$query = "SELECT * FROM admin WHERE ID= {$user_id} LIMIT 1";
+
+	   if($user_id != $_SESSION['user_id'])
+	   {
+		  header("Location: admin.php?Can't Edit details of other Admins&&user_id=".$_SESSION['user_id']);
+	   }
+
+   	$result_set = mysqli_query($connect,$query);
+
+   	if($result_set)
+   	 {
+       if(mysqli_num_rows($result_set) == 1)
+       {
+       	//User Found
+       	$result = mysqli_fetch_assoc($result_set);
+       	$first_name = $result['FirstName'];
+       	$last_name = $result['LastName'];
+       	$email = $result['Email'];
+       }
+       else
+       {
+       	header("Location: admin.php?error=query_failed");
+       }
+   	 }
+
+   	 else
+   	 {
+        header("Location: admin.php?error=query_failed");
+   	 }
+   }
+
+   if(isset($_POST['submit']))
+   {
+   	 $user_id = $_POST['user_id'];
+   	 $first_name = $_POST['first_name'];
+   	 $last_name = $_POST['last_name'];
+   	 //$email = $_POST['email'];
+
+   	 $req_fields = array('user_id','first_name','last_name');
+
+   	 foreach($req_fields as $field)
+   	 {
+   	 	if(empty(trim($_POST[$field])))
+   	 	{
+   	 		$errors[] = $field . " is required";
+   	 	}
+   	 }
+
+   	 $max_len_fields = array('first_name' => 50, 'last_name' => 100);
+
+   	 foreach($max_len_fields as $field => $max_len)
+   	 {
+   	 	if(strlen(trim($_POST[$field])) > $max_len)
+   	 	{
+   	 		$errors[] = $field . ' must be less than ' . $max_len . ' characters.';
+   	 	}
+   	 }
+
+   	//  if(!is_email($_POST['email']))
+   	//  {
+   	//  	$errors[] = 'Email Address in Invalid';
+   	//  }
+
+   	//  $email = mysqli_real_escape_string($connect,$_POST['email']);
+   	//  $query = "SELECT * FROM admin WHERE Email='{$email}' AND ID != {$user_id} LIMIT 1";
+   	//  $result_set = mysqli_query($connect,$query);
+
+   	//  if($result_set)
+   	//  {
+   	//  	if(mysqli_num_rows($result_set) == 1)
+   	//  	{
+   	//  		$errors[] = 'Email Address already Exists';
+   	//  	}
+   	//  }
+
+   	 if(empty($errors))
+   	 {
+   	 	$first_name = mysqli_real_escape_string($connect,$_POST['first_name']);
+   	 	$last_name = mysqli_real_escape_string($connect,$_POST['last_name']);
+   	 	//Email Address is already Sanitized
+
+   	 	$query = "UPDATE admin SET FirstName='{$first_name}', LastName='{$last_name}' WHERE ID = {$user_id} LIMIT 1";
+
+   	 	$result_set = mysqli_query($connect,$query);
+
+   	 	if($result_set)
+   	 	{
+   	 	  header("Location: admin.php?user_modified_corect&&user_id=$user_id");
+   	 	}
+
+   	 	else
+   	 	{
+   	 		$errors[] = "Failed to modify the record";
+   	 	}
+   	 }
+
+   }
+
+?>
+
+<!DOCTYPE>
+
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Modify Admin Details</title>
+	<link rel="stylesheet" type="text/css" href="css/main.css">
+</head>
+
+<body>
+	
+   <header class = "header">
+   	   <div class="appname">Admin</div>
+   	   <div class="loggedin">Welcome <?php echo $first_name; ?>! <a href="logout.php"><button>LogOut</button></a></div>
+
+   	</header>
+  
+  <main>
+
+   <h1>Modify Admin Details</h1>
+
+   <?php
+     
+     if (!empty($errors))
+        {
+         echo '<div class="errmsg">';
+         echo '<b>There were error(s) on your form.</b> <br>';
+
+         foreach($errors as $error)
+           {
+            echo '- ' . $error . '<br>';
+           }
+         echo '</div>';
+
+        }
+
+   ?>
+ 
+   <form class="userform" action="modify_admin.php" method="post">
+
+   	    <input type="hidden" name="user_id" value="<?php echo $user_id; ?>">
+   	  
+   	  <p>
+   	  	<label for="first_name">First Name:</label>
+   	  	<input type="text" name="first_name" id="first_name" placeholder="First Name" <?php echo 'value="' . $first_name . '"'; ?> >
+   	  </p>
+
+   	  <p>
+   	  	<label for="last_name">Last Name:</label>
+   	  	<input type="text" name="last_name" id="last_name" placeholder="Last Name" <?php echo 'value="' . $last_name . '"'; ?> >
+   	  </p>
+
+   	  <p>
+		<label for="email">Email Address:</label>
+		<input type="email" name="email" id="email" placeholder="Email Address" <?php echo 'value="' . $email . '"'; ?> disabled>
+	  </p>
+    
+	  <p>
+		<label for="">&nbsp;</label>
+		<button style="color:white;" type="submit" name="submit">Save</button>
+	  </p>
+
+   </form>	
+
+   <div>
+   	<a href = "change_password_admin.php?user_id=<?php echo $user_id?>"><button style="color:white; width: 200px; margin-top: 0px; margin-left: 250px;">Change Password</button></a>
+   </div>
+
+   <div>
+   	<a href = "admin.php?user_id=<?php echo $user_id?>"><button style="color:white; width: 200px; margin-top: 12px; margin-left: 250px;"> < Back to admin</button></a>
+   </div>
+
+  </main>
+
+</body>
+
+</html>
